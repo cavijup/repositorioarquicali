@@ -18,36 +18,52 @@ st.set_page_config(
 # Función para cargar credenciales de Google Sheets
 @st.cache_resource
 def load_google_credentials():
-    """Carga las credenciales de Google desde el archivo JSON"""
+    """Carga las credenciales de Google desde archivo JSON (local) o secrets (Streamlit Cloud)"""
     try:
-        credentials_path = 'google_credentials.json'
-        if not os.path.exists(credentials_path):
-            st.error("❌ No se encontró el archivo 'google_credentials.json'")
-            st.info("💡 Asegúrate de que el archivo esté en el mismo directorio que la aplicación")
+        # Intentar cargar desde Streamlit secrets (para producción)
+        if "google_credentials" in st.secrets:
+            credentials_dict = dict(st.secrets["google_credentials"])
+            scope = [
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/spreadsheets"
+            ]
+            credentials = Credentials.from_service_account_info(credentials_dict, scopes=scope)
+            return credentials
+        
+        # Intentar cargar desde archivo local (para desarrollo)
+        elif os.path.exists('google_credentials.json'):
+            credentials_path = 'google_credentials.json'
+            scope = [
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/spreadsheets"
+            ]
+            credentials = Credentials.from_service_account_file(credentials_path, scopes=scope)
+            return credentials
+        
+        else:
+            st.error("❌ No se encontraron credenciales de Google")
+            st.info("💡 Para desarrollo local: agrega 'google_credentials.json'")
+            st.info("💡 Para Streamlit Cloud: configura los secrets")
             return None
             
-        # Usar directamente el archivo de credenciales
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive",
-            "https://www.googleapis.com/auth/spreadsheets"
-        ]
-        
-        credentials = Credentials.from_service_account_file(credentials_path, scopes=scope)
-        return credentials
-        
-    except FileNotFoundError:
-        st.error("❌ No se encontró el archivo 'google_credentials.json'")
-        st.info("💡 Asegúrate de que el archivo esté en el mismo directorio que la aplicación")
-        return None
-    except json.JSONDecodeError:
-        st.error("❌ Error al leer el archivo 'google_credentials.json'. Verifica que sea un JSON válido")
-        return None
     except Exception as e:
         st.error(f"❌ Error cargando credenciales: {str(e)}")
         return None
 
 GOOGLE_SHEET_ID = "1svD6kfWvI9GTNzoqIhmSNa80MfGpjWqwQJRxOLxXOXI"
+
+# Función para obtener el ID del Google Sheet
+def get_google_sheet_id():
+    """Obtiene el ID del Google Sheet desde secrets o usa el valor por defecto"""
+    try:
+        if "google_sheet" in st.secrets and "sheet_id" in st.secrets["google_sheet"]:
+            return st.secrets["google_sheet"]["sheet_id"]
+        else:
+            return GOOGLE_SHEET_ID
+    except:
+        return GOOGLE_SHEET_ID
 
 # Configuración de las pestañas
 SHEET_CONFIG = {
