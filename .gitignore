@@ -1,0 +1,204 @@
+# ==========================================
+# ARCHIVOS SENSIBLES - NO SUBIR A GITHUB
+# ==========================================
+
+# Credenciales de Google Sheets
+google_credentials.json
+*.json
+
+# Variables de entorno
+.env
+.env.local
+.env.production
+.env.staging
+
+# Llaves y certificados
+*.key
+*.pem
+*.crt
+*.p12
+
+# ==========================================
+# ARCHIVOS DE PYTHON
+# ==========================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# ==========================================
+# STREAMLIT ESPECÍFICO
+# ==========================================
+
+# Streamlit cache
+.streamlit/
+
+# Archivos de configuración local de Streamlit
+streamlit_config.toml
+
+# ==========================================
+# ARCHIVOS DEL SISTEMA
+# ==========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ==========================================
+# EDITORES E IDEs
+# ==========================================
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ==========================================
+# LOGS Y ARCHIVOS TEMPORALES
+# ==========================================
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary folders
+tmp/
+temp/
+
+# ==========================================
+# DATOS Y RESPALDOS
+# ==========================================
+
+# Archivos de datos locales (si tienes alguno)
+data/
+datasets/
+*.csv
+*.xlsx
+*.xls
+
+# Respaldos
+backup/
+*.backup
+*.bak
+
+# ==========================================
+# OTROS ARCHIVOS A IGNORAR
+# ==========================================
+
+# Archivos de configuración personal
+config.py
+settings.py
+local_settings.py
+
+# Archivos de prueba
+test_files/
+testing/
+*.test
+
+# Documentación generada
+docs/_build/
+
+# Node modules (si usas alguna herramienta de Node.js)
+node_modules/
