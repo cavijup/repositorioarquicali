@@ -6,6 +6,8 @@ import json
 from datetime import datetime
 import re
 import os
+import plotly.express as px
+import plotly.graph_objects as go
 
 # Configuración de la página
 st.set_page_config(
@@ -15,43 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Función para cargar credenciales de Google Sheets
-@st.cache_resource
-def load_google_credentials():
-    """Carga las credenciales de Google desde archivo JSON (local) o secrets (Streamlit Cloud)"""
-    try:
-        # Intentar cargar desde Streamlit secrets (para producción)
-        if "google_credentials" in st.secrets:
-            credentials_dict = dict(st.secrets["google_credentials"])
-            scope = [
-                "https://spreadsheets.google.com/feeds",
-                "https://www.googleapis.com/auth/drive",
-                "https://www.googleapis.com/auth/spreadsheets"
-            ]
-            credentials = Credentials.from_service_account_info(credentials_dict, scopes=scope)
-            return credentials
-        
-        # Intentar cargar desde archivo local (para desarrollo)
-        elif os.path.exists('google_credentials.json'):
-            credentials_path = 'google_credentials.json'
-            scope = [
-                "https://spreadsheets.google.com/feeds",
-                "https://www.googleapis.com/auth/drive",
-                "https://www.googleapis.com/auth/spreadsheets"
-            ]
-            credentials = Credentials.from_service_account_file(credentials_path, scopes=scope)
-            return credentials
-        
-        else:
-            st.error("❌ No se encontraron credenciales de Google")
-            st.info("💡 Para desarrollo local: agrega 'google_credentials.json'")
-            st.info("💡 Para Streamlit Cloud: configura los secrets")
-            return None
-            
-    except Exception as e:
-        st.error(f"❌ Error cargando credenciales: {str(e)}")
-        return None
-
+# ID del Google Sheet
 GOOGLE_SHEET_ID = "1svD6kfWvI9GTNzoqIhmSNa80MfGpjWqwQJRxOLxXOXI"
 
 # Función para obtener el ID del Google Sheet
@@ -111,18 +77,56 @@ SHEET_CONFIG = {
     }
 }
 
+# Función para cargar credenciales de Google Sheets
+@st.cache_resource
+def load_google_credentials():
+    """Carga las credenciales de Google desde archivo JSON (local) o secrets (Streamlit Cloud)"""
+    try:
+        # Intentar cargar desde Streamlit secrets (para producción)
+        if "google_credentials" in st.secrets:
+            credentials_dict = dict(st.secrets["google_credentials"])
+            scope = [
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/spreadsheets"
+            ]
+            credentials = Credentials.from_service_account_info(credentials_dict, scopes=scope)
+            return credentials
+        
+        # Intentar cargar desde archivo local (para desarrollo)
+        elif os.path.exists('google_credentials.json'):
+            credentials_path = 'google_credentials.json'
+            scope = [
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/spreadsheets"
+            ]
+            credentials = Credentials.from_service_account_file(credentials_path, scopes=scope)
+            return credentials
+        
+        else:
+            st.error("❌ No se encontraron credenciales de Google")
+            st.info("💡 Para desarrollo local: agrega 'google_credentials.json'")
+            st.info("💡 Para Streamlit Cloud: configura los secrets")
+            return None
+            
+    except Exception as e:
+        st.error(f"❌ Error cargando credenciales: {str(e)}")
+        return None
+
 @st.cache_resource
 def connect_to_google_sheets():
     """Conecta a Google Sheets y retorna el workbook"""
     try:
-        # Cargar credenciales desde archivo JSON
+        # Cargar credenciales desde archivo JSON o secrets
         credentials = load_google_credentials()
         if credentials is None:
             return None
             
         # Autorizar cliente con gspread
         client = gspread.authorize(credentials)
-        workbook = client.open_by_key(GOOGLE_SHEET_ID)
+        sheet_id = get_google_sheet_id()
+        workbook = client.open_by_key(sheet_id)
         return workbook
         
     except gspread.exceptions.SpreadsheetNotFound:
@@ -213,7 +217,6 @@ def search_in_dataframe(df, search_column, search_term):
     mask = df[search_column].astype(str).apply(normalize_text).str.contains(search_term_normalized, na=False)
     
     return df[mask]
-
 def display_record_card(record, sheet_name):
     """Muestra una tarjeta con la información del registro"""
     config = SHEET_CONFIG[sheet_name]
@@ -282,61 +285,440 @@ def get_all_comedores():
     
     return sorted(list(all_comedores))
 
-def main():
-    # Banner superior con imagen - Configuración de tamaño y posición
-    try:
-        from PIL import Image
-        banner_image = Image.open("imagenvjp.png")
-        
-        # Espacio superior (si quieres mover la imagen hacia abajo)
-        # st.write("")  # Descomenta para agregar espacio arriba
-        
-        # CONFIGURACIÓN DE IMAGEN - Elige una de las siguientes opciones:
-        
-        # OPCIÓN 1: Imagen centrada con tamaño controlado (RECOMENDADA)
-        col1, col2, col3 = st.columns([1, 2, 1])  # Imagen ocupa 50% del ancho
-        with col2:
-            st.image(banner_image, use_container_width=True)
-        
-        # OPCIÓN 2: Imagen con ancho fijo (descomenta para usar)
-        # st.image(banner_image, width=500)  # Cambia 500 por el ancho deseado
-        
-        # OPCIÓN 3: Imagen más estrecha y centrada (descomenta para usar)
-        # col1, col2, col3 = st.columns([2, 1, 2])  # Imagen ocupa 25% del ancho
-        # with col2:
-        #     st.image(banner_image, use_container_width=True)
-        
-        # OPCIÓN 4: Imagen con CSS personalizado (descomenta para usar)
-        # st.markdown("""
-        # <style>
-        # .banner-container {
-        #     display: flex;
-        #     justify-content: center;
-        #     margin-top: 10px;
-        #     margin-bottom: 20px;
-        # }
-        # .banner-container img {
-        #     max-width: 400px;
-        #     height: auto;
-        #     border-radius: 10px;
-        #     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        # }
-        # </style>
-        # """, unsafe_allow_html=True)
-        # st.markdown('<div class="banner-container">', unsafe_allow_html=True)
-        # st.image(banner_image, use_container_width=True)
-        # st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Espacio después de la imagen
-        st.write("")  # Espacio pequeño después de la imagen
-        # st.markdown("<br>", unsafe_allow_html=True)  # Descomenta para más espacio
-        
-    except FileNotFoundError:
-        st.error("❌ No se encontró la imagen 'imagenvjp.png' en el directorio del proyecto")
-        st.info("💡 Asegúrate de que el archivo 'imagenvjp.png' esté en la misma carpeta que la aplicación")
-    except Exception as e:
-        st.warning(f"⚠️ No se pudo cargar la imagen del banner: {str(e)}")
+# ==========================================
+# AGENTE DE INTELIGENCIA ARTIFICIAL
+# ==========================================
+
+class ComedorAIAgent:
+    def __init__(self, sheet_config, load_sheet_data_func):
+        self.sheet_config = sheet_config
+        self.load_sheet_data = load_sheet_data_func
+        self.conversation_history = []
     
+    def process_query(self, user_query):
+        """Procesa la consulta del usuario usando lógica de NLP básica"""
+        query_lower = user_query.lower()
+        
+        # Detectar el nombre del comedor
+        comedor_name = self._extract_comedor_name(query_lower)
+        
+        # Detectar tipo de consulta
+        query_type = self._detect_query_type(query_lower)
+        
+        # Procesar según el tipo
+        if query_type == "search_comedor":
+            return self._search_comedor_info(comedor_name, user_query)
+        elif query_type == "compare_data":
+            return self._compare_comedor_data(comedor_name, user_query)
+        elif query_type == "statistics":
+            return self._generate_statistics(comedor_name, user_query)
+        elif query_type == "cross_analysis":
+            return self._cross_analysis(comedor_name, user_query)
+        else:
+            return self._general_search(user_query)
+    
+    def _extract_comedor_name(self, query):
+        """Extrae el nombre del comedor de la consulta"""
+        # Patrones comunes para identificar nombres de comedores
+        patterns = [
+            r"comedor\s+([a-záéíóúñ\s]+?)(?:\s|$|,|\?|\.)",
+            r"del\s+([a-záéíóúñ\s]+?)(?:\s|$|,|\?|\.)",
+            r"llamado\s+([a-záéíóúñ\s]+?)(?:\s|$|,|\?|\.)",
+            r"nombre\s+([a-záéíóúñ\s]+?)(?:\s|$|,|\?|\.)",
+            r"([a-záéíóúñ\s]{3,})(?:\s|$|,|\?|\.)"  # Palabras de 3+ caracteres
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, query)
+            if match:
+                return match.group(1).strip()
+        return None
+    
+    def _detect_query_type(self, query):
+        """Detecta el tipo de consulta basado en palabras clave"""
+        if any(word in query for word in ["busca", "información", "datos", "todo", "completo"]):
+            return "search_comedor"
+        elif any(word in query for word in ["compara", "diferencias", "vs", "versus", "cruce"]):
+            return "compare_data"
+        elif any(word in query for word in ["estadísticas", "conteo", "cuántos", "total", "promedio"]):
+            return "statistics"
+        elif any(word in query for word in ["análisis", "relación", "correlación", "tendencias"]):
+            return "cross_analysis"
+        else:
+            return "general_search"
+    
+    def _search_comedor_info(self, comedor_name, original_query):
+        """Busca información completa de un comedor específico"""
+        if not comedor_name:
+            return {
+                "type": "error",
+                "message": "No pude identificar el nombre del comedor. ¿Podrías especificarlo más claramente?"
+            }
+        
+        results = {}
+        total_records = 0
+        
+        # Buscar en todas las tablas
+        for sheet_name, config in self.sheet_config.items():
+            df = self.load_sheet_data(sheet_name)
+            if df is not None and not df.empty:
+                search_column = config["search_column"]
+                if search_column in df.columns:
+                    # Búsqueda flexible
+                    mask = df[search_column].astype(str).str.contains(comedor_name, case=False, na=False)
+                    matches = df[mask]
+                    
+                    if not matches.empty:
+                        results[sheet_name] = {
+                            "config": config,
+                            "data": matches,
+                            "count": len(matches)
+                        }
+                        total_records += len(matches)
+        
+        if total_records == 0:
+            return {
+                "type": "no_results",
+                "message": f"No encontré información para el comedor '{comedor_name}'. ¿Verificaste el nombre?"
+            }
+        
+        return {
+            "type": "comedor_info",
+            "comedor_name": comedor_name,
+            "results": results,
+            "total_records": total_records,
+            "message": f"Encontré {total_records} registros para '{comedor_name}' en {len(results)} tabla(s)"
+        }
+    
+    def _compare_comedor_data(self, comedor_name, query):
+        """Compara datos entre diferentes tablas para un comedor"""
+        info_result = self._search_comedor_info(comedor_name, query)
+        
+        if info_result["type"] != "comedor_info":
+            return info_result
+        
+        comparison = {}
+        results = info_result["results"]
+        
+        for sheet_name, sheet_data in results.items():
+            config = sheet_data["config"]
+            df = sheet_data["data"]
+            
+            # Extraer información clave para comparación
+            comparison[sheet_name] = {
+                "area": config["area"],
+                "proposito": config["proposito"],
+                "registros": len(df),
+                "campos_unicos": list(df.columns),
+                "primer_registro": df.iloc[0].to_dict() if len(df) > 0 else {}
+            }
+        
+        return {
+            "type": "comparison",
+            "comedor_name": comedor_name,
+            "comparison": comparison,
+            "message": f"Análisis comparativo de '{comedor_name}' entre {len(comparison)} fuentes de datos"
+        }
+    
+    def _generate_statistics(self, comedor_name, query):
+        """Genera estadísticas generales o específicas"""
+        stats = {}
+        
+        for sheet_name, config in self.sheet_config.items():
+            df = self.load_sheet_data(sheet_name)
+            if df is not None and not df.empty:
+                search_column = config["search_column"]
+                
+                if comedor_name:
+                    # Estadísticas específicas del comedor
+                    mask = df[search_column].astype(str).str.contains(comedor_name, case=False, na=False)
+                    filtered_df = df[mask]
+                    stats[sheet_name] = {
+                        "registros_comedor": len(filtered_df),
+                        "total_registros": len(df),
+                        "porcentaje": (len(filtered_df) / len(df) * 100) if len(df) > 0 else 0
+                    }
+                else:
+                    # Estadísticas generales
+                    stats[sheet_name] = {
+                        "total_registros": len(df),
+                        "comedores_unicos": df[search_column].nunique() if search_column in df.columns else 0,
+                        "area": config["area"]
+                    }
+        
+        return {
+            "type": "statistics",
+            "comedor_name": comedor_name,
+            "stats": stats,
+            "message": f"Estadísticas {'para ' + comedor_name if comedor_name else 'generales'}"
+        }
+    
+    def _cross_analysis(self, comedor_name, query):
+        """Realiza análisis cruzado entre diferentes fuentes"""
+        if not comedor_name:
+            return {
+                "type": "error",
+                "message": "Para análisis cruzado necesito el nombre específico del comedor"
+            }
+        
+        # Buscar datos del comedor en todas las fuentes
+        info_result = self._search_comedor_info(comedor_name, query)
+        
+        if info_result["type"] != "comedor_info":
+            return info_result
+        
+        cross_data = {}
+        results = info_result["results"]
+        
+        # Extraer campos comunes para análisis
+        common_fields = ["direccion", "barrio", "comuna", "fecha", "telefono", "gestora"]
+        
+        for sheet_name, sheet_data in results.items():
+            df = sheet_data["data"]
+            config = sheet_data["config"]
+            
+            # Buscar campos similares
+            matched_fields = {}
+            for field in common_fields:
+                for col in df.columns:
+                    if field.lower() in col.lower():
+                        if len(df) > 0:
+                            matched_fields[field] = df[col].iloc[0]
+                        break
+            
+            cross_data[sheet_name] = {
+                "area": config["area"],
+                "matched_fields": matched_fields,
+                "total_fields": len(df.columns)
+            }
+        
+        return {
+            "type": "cross_analysis",
+            "comedor_name": comedor_name,
+            "cross_data": cross_data,
+            "message": f"Análisis cruzado completado para '{comedor_name}'"
+        }
+    
+    def _general_search(self, query):
+        """Búsqueda general basada en la consulta"""
+        return {
+            "type": "general",
+            "message": "Puedo ayudarte con consultas como:\n- 'Busca información del comedor Semillas'\n- 'Compara datos del comedor La Esperanza'\n- 'Estadísticas del comedor Nuevo Horizonte'\n- '¿Cuántos registros hay en total?'"
+        }
+def display_ai_response(response):
+    """Muestra la respuesta del agente IA"""
+    
+    if response["type"] == "error" or response["type"] == "no_results":
+        st.error(response["message"])
+        
+    elif response["type"] == "general":
+        st.info(response["message"])
+        
+    elif response["type"] == "comedor_info":
+        st.success(response["message"])
+        
+        # Mostrar información por pestañas
+        if len(response["results"]) > 1:
+            tabs = st.tabs([f"{config['config']['name']}" for config in response["results"].values()])
+            
+            for i, (sheet_name, sheet_data) in enumerate(response["results"].items()):
+                with tabs[i]:
+                    config = sheet_data["config"]
+                    df = sheet_data["data"]
+                    
+                    st.markdown(f"**🏢 Área:** {config['area']}")
+                    st.markdown(f"**🎯 Propósito:** {config['proposito']}")
+                    if config['dashboard']:
+                        st.markdown(f"**📈 Dashboard:** [{config['dashboard']}]({config['dashboard']})")
+                    st.markdown(f"**📊 Registros encontrados:** {len(df)}")
+                    
+                    # Mostrar datos en tabla expandible
+                    with st.expander(f"Ver {len(df)} registro(s)", expanded=False):
+                        st.dataframe(df)
+        else:
+            # Solo una tabla con resultados
+            sheet_name = list(response["results"].keys())[0]
+            sheet_data = response["results"][sheet_name]
+            config = sheet_data["config"]
+            df = sheet_data["data"]
+            
+            st.markdown(f"**🏢 Área:** {config['area']}")
+            st.markdown(f"**🎯 Propósito:** {config['proposito']}")
+            if config['dashboard']:
+                st.markdown(f"**📈 Dashboard:** [{config['dashboard']}]({config['dashboard']})")
+            
+            st.dataframe(df)
+    
+    elif response["type"] == "comparison":
+        st.success(response["message"])
+        
+        comparison = response["comparison"]
+        
+        # Tabla de comparación
+        comp_data = []
+        for sheet_name, data in comparison.items():
+            comp_data.append({
+                "Tabla": sheet_name,
+                "Área": data["area"],
+                "Registros": data["registros"],
+                "Total Campos": len(data["campos_unicos"])
+            })
+        
+        st.dataframe(pd.DataFrame(comp_data))
+        
+        # Detalles por tabla
+        for sheet_name, data in comparison.items():
+            with st.expander(f"Detalles de {sheet_name}"):
+                st.write(f"**Propósito:** {data['proposito']}")
+                st.write(f"**Campos disponibles:** {', '.join(data['campos_unicos'][:10])}{'...' if len(data['campos_unicos']) > 10 else ''}")
+    
+    elif response["type"] == "statistics":
+        st.success(response["message"])
+        
+        stats = response["stats"]
+        
+        # Crear visualización
+        if response["comedor_name"]:
+            # Estadísticas específicas del comedor
+            data = []
+            for sheet_name, stat in stats.items():
+                data.append({
+                    "Tabla": sheet_name,
+                    "Registros del Comedor": stat["registros_comedor"],
+                    "Total Registros": stat["total_registros"],
+                    "Porcentaje": round(stat["porcentaje"], 2)
+                })
+            
+            df_stats = pd.DataFrame(data)
+            st.dataframe(df_stats)
+            
+            # Gráfico
+            fig = px.bar(df_stats, x="Tabla", y="Registros del Comedor", 
+                        title=f"Registros por tabla para {response['comedor_name']}")
+            st.plotly_chart(fig)
+        else:
+            # Estadísticas generales
+            data = []
+            for sheet_name, stat in stats.items():
+                data.append({
+                    "Tabla": sheet_name,
+                    "Área": stat["area"],
+                    "Total Registros": stat["total_registros"],
+                    "Comedores Únicos": stat["comedores_unicos"]
+                })
+            
+            df_stats = pd.DataFrame(data)
+            st.dataframe(df_stats)
+            
+            # Gráfico de registros por área
+            fig = px.pie(df_stats, values="Total Registros", names="Área", 
+                        title="Distribución de registros por área")
+            st.plotly_chart(fig)
+    
+    elif response["type"] == "cross_analysis":
+        st.success(response["message"])
+        
+        cross_data = response["cross_data"]
+        
+        # Mostrar análisis cruzado
+        for sheet_name, data in cross_data.items():
+            with st.expander(f"Datos en {sheet_name} ({data['area']})"):
+                if data["matched_fields"]:
+                    for field, value in data["matched_fields"].items():
+                        st.write(f"**{field.title()}:** {value}")
+                else:
+                    st.write("No se encontraron campos comunes")
+
+def show_ai_agent_page():
+    """Muestra la página del agente IA"""
+    
+    st.title("🤖 Asistente IA de Comedores")
+    st.markdown("---")
+    
+    st.markdown("""
+    ### 💬 ¿En qué puedo ayudarte?
+    
+    Puedes hacerme preguntas como:
+    - "Busca toda la información del comedor Semillas"
+    - "Compara los datos del comedor La Esperanza entre todas las tablas"
+    - "¿Cuántos registros tiene el comedor Nuevo Horizonte?"
+    - "Análisis cruzado del comedor San José"
+    - "Estadísticas generales de todos los comedores"
+    """)
+    
+    # Inicializar el agente IA
+    if 'ai_agent' not in st.session_state:
+        st.session_state.ai_agent = ComedorAIAgent(SHEET_CONFIG, load_sheet_data)
+    
+    # Historial de conversación
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
+    # Campo de entrada de consulta
+    user_query = st.text_input(
+        "🔍 Escribe tu consulta:",
+        placeholder="Ej: Busca información del comedor Semillas",
+        key="ai_query_input"
+    )
+    
+    col1, col2 = st.columns([1, 4])
+    
+    with col1:
+        submit_query = st.button("🚀 Consultar", type="primary")
+    
+    with col2:
+        if st.button("🗑️ Limpiar historial"):
+            st.session_state.chat_history = []
+            st.rerun()
+    
+    # Procesar consulta
+    if submit_query and user_query:
+        with st.spinner("🧠 Procesando tu consulta..."):
+            response = st.session_state.ai_agent.process_query(user_query)
+            
+            # Agregar al historial
+            st.session_state.chat_history.append({
+                "query": user_query,
+                "response": response,
+                "timestamp": datetime.now().strftime("%H:%M:%S")
+            })
+    
+    # Mostrar respuesta actual
+    if st.session_state.chat_history:
+        latest_interaction = st.session_state.chat_history[-1]
+        
+        st.markdown("### 💭 Respuesta:")
+        display_ai_response(latest_interaction["response"])
+    
+    # Mostrar historial
+    if len(st.session_state.chat_history) > 1:
+        with st.expander("📚 Historial de conversación", expanded=False):
+            for i, interaction in enumerate(reversed(st.session_state.chat_history[:-1])):
+                st.markdown(f"**[{interaction['timestamp']}] 👤:** {interaction['query']}")
+                st.markdown(f"**🤖:** {interaction['response']['message']}")
+                if i < len(st.session_state.chat_history) - 2:
+                    st.markdown("---")
+    
+    # Ejemplos de consultas
+    st.markdown("### 💡 Ejemplos de consultas:")
+    
+    examples = [
+        "Busca información del comedor Semillas",
+        "Compara datos del comedor La Esperanza",
+        "Estadísticas del comedor Nuevo Horizonte",
+        "¿Cuántos comedores hay en total?",
+        "Análisis cruzado del comedor San José"
+    ]
+    
+    cols = st.columns(2)
+    for i, example in enumerate(examples):
+        with cols[i % 2]:
+            if st.button(f"📝 {example}", key=f"example_{i}"):
+                st.session_state.ai_query_input = example
+                st.rerun()
+
+def show_search_page():
+    """Muestra la página de búsqueda tradicional"""
     st.title("🍽️ Buscador de Comedores Comunitarios")
     st.markdown("---")
     
@@ -466,6 +848,38 @@ def main():
         - **Filtre por tablas** para búsquedas más específicas
         - **Expanda las tarjetas** para ver información detallada
         """)
+
+def main():
+    # Banner superior con imagen - Configuración de tamaño y posición
+    try:
+        from PIL import Image
+        banner_image = Image.open("imagenvjp.png")
+        
+        # CONFIGURACIÓN DE IMAGEN - Imagen centrada con tamaño controlado
+        col1, col2, col3 = st.columns([1, 2, 1])  # Imagen ocupa 50% del ancho
+        with col2:
+            st.image(banner_image, use_container_width=True)
+        
+        # Espacio después de la imagen
+        st.write("")  # Espacio pequeño después de la imagen
+        
+    except FileNotFoundError:
+        st.error("❌ No se encontró la imagen 'imagenvjp.png' en el directorio del proyecto")
+        st.info("💡 Asegúrate de que el archivo esté en la misma carpeta que la aplicación")
+    except Exception as e:
+        st.warning(f"⚠️ No se pudo cargar la imagen del banner: {str(e)}")
+    
+    # Menú de navegación
+    page = st.sidebar.selectbox(
+        "🧭 Navegación",
+        ["🔍 Buscador", "🤖 Asistente IA"],
+        index=0
+    )
+    
+    if page == "🔍 Buscador":
+        show_search_page()
+    elif page == "🤖 Asistente IA":
+        show_ai_agent_page()
 
 if __name__ == "__main__":
     main()
