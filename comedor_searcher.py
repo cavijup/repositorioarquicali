@@ -724,31 +724,18 @@ def show_search_page():
     
     # Sidebar para filtros
     with st.sidebar:
-        st.header("🔍 Opciones de Búsqueda")
+        st.header("🔍 Seleccionar Comedor")
         
-        # Tipo de búsqueda
-        search_type = st.radio(
-            "Tipo de búsqueda:",
-            ["Búsqueda libre", "Seleccionar de lista"],
-            index=0
+        # Solo opción de seleccionar de lista
+        with st.spinner("Cargando lista de comedores..."):
+            comedores_list = get_all_comedores()
+        
+        search_term = st.selectbox(
+            "Seleccione un comedor:",
+            [""] + comedores_list,
+            index=0,
+            help="Seleccione de la lista completa de comedores"
         )
-        
-        if search_type == "Búsqueda libre":
-            search_term = st.text_input(
-                "Nombre del comedor:",
-                placeholder="Escriba el nombre del comedor...",
-                help="Puede escribir parte del nombre, la búsqueda es flexible"
-            )
-        else:
-            with st.spinner("Cargando lista de comedores..."):
-                comedores_list = get_all_comedores()
-            
-            search_term = st.selectbox(
-                "Seleccione un comedor:",
-                [""] + comedores_list,
-                index=0,
-                help="Seleccione de la lista completa de comedores"
-            )
         
         # Filtro por tablas
         st.subheader("📊 Filtrar por tablas")
@@ -869,17 +856,8 @@ def main():
     except Exception as e:
         st.warning(f"⚠️ No se pudo cargar la imagen del banner: {str(e)}")
     
-    # Menú de navegación
-    page = st.sidebar.selectbox(
-        "🧭 Navegación",
-        ["🔍 Buscador", "🤖 Asistente IA"],
-        index=0
-    )
-    
-    if page == "🔍 Buscador":
-        show_search_page()
-    elif page == "🤖 Asistente IA":
-        show_ai_agent_page()
+    # Mostrar directamente la página de búsqueda
+    show_search_page()
 
 if __name__ == "__main__":
     main()
